@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 176" fill="none">
+  <defs>
+    <filter id="faceid-glow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="1.35" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <style>
+    .island {
+      transform-box: fill-box;
+      transform-origin: center top;
+      transform: scale(0.56, 0.19);
+      animation: isle 2.8s linear forwards;
+    }
+    @keyframes isle {
+      0% { transform: scale(0.56, 0.19); animation-timing-function: cubic-bezier(0.16, 0.84, 0.24, 1.16); }
+      16% { transform: scale(1, 1); animation-timing-function: linear; }
+      76% { transform: scale(1, 1); animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.15); }
+      100% { transform: scale(0.56, 0.19); }
+    }
+    .glyph, .mark {
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    .glyph {
+      opacity: 0;
+      animation: glyph 2.8s linear forwards;
+    }
+    @keyframes glyph {
+      0%, 12% { opacity: 0; transform: scale(0.86); }
+      24% { opacity: 1; transform: scale(1); animation-timing-function: linear; }
+      50% { opacity: 1; transform: scale(1); }
+      60%, 100% { opacity: 0; transform: scale(0.94); }
+    }
+    .mark {
+      opacity: 0;
+      animation: mark 2.8s linear forwards;
+    }
+    @keyframes mark {
+      0%, 48% { opacity: 0; transform: scale(0.64); }
+      62% { opacity: 1; transform: scale(1); animation-timing-function: linear; }
+      78% { opacity: 1; transform: scale(1); }
+      88%, 100% { opacity: 0; transform: scale(0.88); }
+    }
+    .tick {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      animation: tick 2.8s linear forwards;
+    }
+    @keyframes tick {
+      0%, 56% { stroke-dashoffset: 1; }
+      70%, 100% { stroke-dashoffset: 0; }
+    }
+  </style>
+  <rect class="island" x="36" y="8" width="148" height="148" rx="46" fill="#000"/>
+  <g transform="translate(110 82)" filter="url(#faceid-glow)">
+    <g class="glyph" stroke="#86F8B4" stroke-width="3.15" stroke-linecap="round" stroke-linejoin="round">
+      <g transform="scale(1.72) translate(-32 -32)">
+        <path d="M4 20v-6A10 10 0 0 1 14 4h6"/>
+        <path d="M44 4h6a10 10 0 0 1 10 10v6"/>
+        <path d="M60 44v6a10 10 0 0 1-10 10h-6"/>
+        <path d="M20 60h-6A10 10 0 0 1 4 50v-6"/>
+        <path d="M21 23v6"/>
+        <path d="M43 23v6"/>
+        <path d="M33 22.5V35c0 1.7-1.1 2.8-2.8 2.8H28"/>
+        <path d="M22 45c5.2 4.6 14.8 4.6 20 0"/>
+      </g>
+    </g>
+    <g class="mark">
+      <g transform="scale(1.72) translate(-32 -32)" stroke="#86F8B4" stroke-width="3.15" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="32" cy="32" r="26"/>
+        <path class="tick" pathLength="1" d="M18.6 33.4 27.4 42.6 46.2 21.4"/>
+      </g>
+    </g>
+  </g>
+</svg>

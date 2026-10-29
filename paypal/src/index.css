@@ -1,0 +1,65 @@
+@font-face {
+  font-family: 'PayPal Pro Text';
+  src: url('https://www.paypalobjects.com/marketing/pp-com-components/fonts/PayPalPro/PayPalProTextVFWeb.woff2')
+    format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+  height: 100%;
+  overflow: hidden;
+  background: #eff2f7;
+}
+
+body {
+  font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+  overflow: hidden;
+  background: #eff2f7;
+}
+
+#root {
+  height: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.ios-blur-fix {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  /* Below Dynamic Island / Face ID so the cutout sits in the status bar. */
+  z-index: 90;
+  pointer-events: none;
+  background-color: #eff2f7;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+html.splash-on .ios-blur-fix {
+  background-color: #022485;
+}
+
+button {
+  font: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

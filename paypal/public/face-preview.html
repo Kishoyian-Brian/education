@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>preview</title>
+<style>
+  body { margin: 0; background: #e8eaee; display: grid; place-items: start center; }
+  .phone { width: 390px; height: 844px; background: #fff; position: relative; }
+  .slot { position: absolute; top: 0; left: 50%; width: 230px; transform: translateX(-50%); }
+  .slot svg { display: block; width: 100%; height: auto; }
+</style>
+<div class="phone"><div class="slot" id="slot"></div></div>
+<script>
+fetch('/src/assets/face-id.svg').then(r => r.text()).then(t => {
+  document.getElementById('slot').innerHTML = t
+  document.title = 'preview-ready'
+})
+</script>

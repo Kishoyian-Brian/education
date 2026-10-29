@@ -1,0 +1,42 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>frames</title>
+<style>
+  body { margin: 0; background: #111; }
+  .grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; }
+  figure { margin: 0; }
+  canvas { width: 360px; height: auto; background: #000; display: block; }
+  figcaption { color: #fff; font: 12px/1.4 sans-serif; }
+</style>
+<video id="v" src="/face-ref.mp4" muted playsinline style="display:none"></video>
+<div class="grid" id="g"></div>
+<script>
+const times = [10.15, 10.4, 10.55, 10.7, 10.85, 11.05, 11.25, 11.5]
+const v = document.getElementById('v')
+const g = document.getElementById('g')
+function seek(t) {
+  return new Promise((res) => {
+    const on = () => {
+      v.removeEventListener('seeked', on)
+      res()
+    }
+    v.addEventListener('seeked', on)
+    v.currentTime = t
+  })
+}
+v.addEventListener('loadeddata', async () => {
+  for (const t of times) {
+    await seek(t)
+    const c = document.createElement('canvas')
+    c.width = v.videoWidth
+    c.height = 420
+    c.getContext('2d').drawImage(v, 0, 0, v.videoWidth, 420, 0, 0, c.width, c.height)
+    const fig = document.createElement('figure')
+    const cap = document.createElement('figcaption')
+    cap.textContent = t.toFixed(2) + 's'
+    fig.append(cap, c)
+    g.append(fig)
+  }
+  document.title = 'frames-ready'
+})
+</script>
