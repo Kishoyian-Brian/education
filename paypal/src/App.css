@@ -13,28 +13,35 @@
   flex-direction: column;
 }
 
-/* Face ID starts at the phone status-bar edge (top: 0) and expands down */
+/*
+ * Face ID overlay on the blue status bar.
+ * Fixed to the viewport top so nothing can push it under the bar.
+ * Same size — full square visible above the status-bar color layer.
+ */
 .face-id-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 220;
-  overflow: hidden;
+  z-index: 2147483647;
+  overflow: visible;
   pointer-events: none;
 }
 
 .face-id-overlay__frame {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 50%;
-  width: 230px;
-  transform: translateX(-50%);
+  width: calc(126px * 440 / 345);
+  /* SVG expanded panel top is y=40 — pin that to the top of the blue bar */
+  transform: translate(-50%, calc(-100% * 40 / 370));
   line-height: 0;
+  z-index: 2147483647;
 }
 
 .face-id-overlay__frame svg {
   display: block;
   width: 100%;
   height: auto;
+  overflow: visible;
 }
 
 .ptr {

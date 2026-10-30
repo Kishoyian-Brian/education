@@ -1,11 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 370" width="100%" height="100%" fill="none">
 <defs><filter id="b" filterUnits="userSpaceOnUse" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>
-<rect x="47" y="39" width="345" height="74" rx="37" fill="#000">
-  <animate attributeName="x" dur="3.537s" repeatCount="indefinite" keyTimes="0;0.0283;0.0707;0.1272;0.853;0.9378;1" values="47;85;93;75;75;47;47" calcMode="spline" keySplines="0 0 1 1;0.33 1 0.68 1;0.63 0 0.64 0.88;0 0 1 1;0.77 0.2 0.29 0.88;0 0 1 1"/>
-  <animate attributeName="y" dur="3.537s" repeatCount="indefinite" keyTimes="0;0.0283;0.0707;0.853;0.9378;1" values="39;39;40;40;39;39" calcMode="spline" keySplines="0 0 1 1;0.33 1 0.68 1;0 0 1 1;0.77 0.2 0.29 0.88;0 0 1 1"/>
-  <animate attributeName="width" dur="3.537s" repeatCount="indefinite" keyTimes="0;0.0283;0.0707;0.1272;0.853;0.9378;1" values="345;269;253;289;289;345;345" calcMode="spline" keySplines="0 0 1 1;0.33 1 0.68 1;0.63 0 0.64 0.88;0 0 1 1;0.77 0.2 0.29 0.88;0 0 1 1"/>
-  <animate attributeName="height" dur="3.537s" repeatCount="indefinite" keyTimes="0;0.0283;0.0707;0.1272;0.7681;0.8247;0.853;0.9378;1" values="74;77;74;289;289;66;80;74;74" calcMode="spline" keySplines="0 0 1 1;0.33 1 0.68 1;0.63 0 0.64 0.88;0 0 1 1;0.63 0 0.64 0.88;0.63 0 0.43 0.97;0.77 0.2 0.29 0.88;0 0 1 1"/>
-  <animate attributeName="rx" dur="3.537s" repeatCount="indefinite" keyTimes="0;0.0707;0.1272;0.7681;0.8247;0.853;0.9378;1" values="37;37;79;79;33;40;37;37" calcMode="spline" keySplines="0 0 1 1;0.63 0 0.64 0.88;0 0 1 1;0.63 0 0.64 0.88;0.63 0 0.43 0.97;0.77 0.2 0.29 0.88;0 0 1 1"/>
+<!-- Expanded black panel only during the scan — no pill before/after -->
+<rect x="75" y="40" width="289" height="289" rx="79" fill="#000" opacity="0">
+  <animate attributeName="opacity" dur="3.537s" repeatCount="indefinite" keyTimes="0;0.0707;0.1272;0.7681;0.8247;1" values="0;0;1;1;0;0" calcMode="spline" keySplines="0 0 1 1;0.63 0 0.64 0.88;0 0 1 1;0.63 0 0.64 0.88;0 0 1 1"/>
 </rect>
 <defs><filter id="g" filterUnits="userSpaceOnUse" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
 <g transform="translate(219.5 184.5)" opacity="0" filter="url(#g)">
@@ -80,4 +77,6 @@
   <animate attributeName="stroke-dashoffset" dur="3.537s" repeatCount="indefinite" keyTimes="0;0.5702;0.655;1" values="1;1;0;0" calcMode="spline" keySplines="0 0 1 1;0.33 1 0.68 1;0 0 1 1"/>
   <animate attributeName="opacity" dur="3.537s" repeatCount="indefinite" keyTimes="0;0.5702;0.655;0.7681;0.8247;1" values="0;0;1;1;0;0" calcMode="spline" keySplines="0 0 1 1;0.33 1 0.68 1;0 0 1 1;0.63 0 0.64 0.88;0 0 1 1"/>
 </path>
+
+
 </svg>

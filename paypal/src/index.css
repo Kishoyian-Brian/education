@@ -39,9 +39,9 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 12px;
-  /* Below Dynamic Island / Face ID so the cutout sits in the status bar. */
-  z-index: 90;
+  height: env(safe-area-inset-top, 0px);
+  /* Below Face ID so the animation can sit on the status bar */
+  z-index: 1;
   pointer-events: none;
   background-color: #eff2f7;
   -webkit-background-clip: text;
