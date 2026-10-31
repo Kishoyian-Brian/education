@@ -1,10 +1,14 @@
 .phone {
   --sat: env(safe-area-inset-top, 0px);
-  position: relative;
+  /* Fixed to the visual viewport so the footer reaches the real bottom
+     (100svh alone left a grey gap under the nav on iOS). */
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100%;
   max-width: 430px;
-  height: 100dvh;
-  height: 100svh;
   margin: 0 auto;
   padding-top: var(--sat);
   background: #eff2f7;
@@ -2833,10 +2837,11 @@
 
 .bottom-nav {
   flex-shrink: 0;
+  margin-top: auto;
   width: 100%;
   height: calc(76px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-      box-sizing: border-box;
+  box-sizing: border-box;
   background: #fff;
   box-shadow: 0 -1px 0 #ededed;
   display: grid;
