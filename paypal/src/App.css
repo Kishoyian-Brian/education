@@ -1,14 +1,14 @@
 .phone {
   --sat: env(safe-area-inset-top, 0px);
-  /* Fixed to the visual viewport so the footer reaches the real bottom
-     (100svh alone left a grey gap under the nav on iOS). */
+  --sab: env(safe-area-inset-bottom, 0px);
+  /* Tab bar content height only — safe-area is padding on the bar itself */
+  --nav-h: 76px;
+  --nav-total: calc(var(--nav-h) + var(--sab));
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   max-width: 430px;
+  height: 100dvh;
   margin: 0 auto;
   padding-top: var(--sat);
   background: #eff2f7;
@@ -18,15 +18,24 @@
 }
 
 /*
- * Face ID overlay on the blue status bar.
- * Fixed to the viewport top so nothing can push it under the bar.
- * Same size — full square visible above the status-bar color layer.
+ * Face ID overlay — crisp glyph at the status bar, no backdrop blur.
  */
 .face-id-overlay {
   position: fixed;
   inset: 0;
   z-index: 2147483647;
   overflow: visible;
+  pointer-events: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  opacity: 1;
+  transition: opacity 300ms ease, backdrop-filter 300ms ease;
+}
+
+.face-id-overlay--out {
+  opacity: 0;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
   pointer-events: none;
 }
 
@@ -35,10 +44,22 @@
   top: 0;
   left: 50%;
   width: calc(126px * 440 / 345);
-  /* SVG expanded panel top is y=40 — pin that to the top of the blue bar */
-  transform: translate(-50%, calc(-100% * 40 / 370));
+  /* SVG expanded panel top is y=40 — pin that to the top of the status bar */
+  --face-y: calc(-100% * 40 / 370);
+  transform: translate3d(-50%, var(--face-y), 0);
   line-height: 0;
   z-index: 2147483647;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform-origin: center top;
+}
+
+.face-id-overlay--in .face-id-overlay__frame {
+  animation: face-id-in 250ms ease-out both;
+}
+
+.face-id-overlay--pending .face-id-overlay__frame {
+  animation: face-id-pulse 1.25s ease-in-out infinite;
 }
 
 .face-id-overlay__frame svg {
@@ -46,6 +67,28 @@
   width: 100%;
   height: auto;
   overflow: visible;
+  shape-rendering: geometricPrecision;
+}
+
+@keyframes face-id-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-50%, var(--face-y), 0) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(-50%, var(--face-y), 0) scale(1);
+  }
+}
+
+@keyframes face-id-pulse {
+  0%,
+  100% {
+    transform: translate3d(-50%, var(--face-y), 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-50%, var(--face-y), 0) scale(1.04);
+  }
 }
 
 .ptr {
@@ -115,7 +158,7 @@
   top: 0;
   right: 0;
   left: 0;
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  bottom: var(--nav-total, calc(76px + env(safe-area-inset-bottom, 0px)));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2214,6 +2257,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* Tab bar height + safe-area so last items clear the fixed nav */
+  padding-bottom: var(--nav-total, calc(76px + env(safe-area-inset-bottom, 0px)));
 }
 
 .screen--home {
@@ -2836,10 +2881,15 @@
 }
 
 .bottom-nav {
-  flex-shrink: 0;
-  margin-top: auto;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
   width: 100%;
-  height: calc(76px + env(safe-area-inset-bottom, 0px));
+  max-width: 430px;
+  margin: 0 auto;
+  height: var(--nav-total, calc(76px + env(safe-area-inset-bottom, 0px)));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   box-sizing: border-box;
   background: #fff;
@@ -5659,6 +5709,20 @@
   border-top-color: #111;
   border-radius: 50%;
   animation: route-spin 0.8s linear infinite;
+}
+
+.welcome__retry {
+  position: absolute;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  padding: 12px 28px;
+  border-radius: 24px;
+  background: #0070e0;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .activity-row b {

@@ -4063,30 +4063,88 @@ function JustAMoment() {
   )
 }
 
-function WelcomeBack({ onDone, onFaceId }: { onDone: () => void; onFaceId: () => void }) {
-  const [phase, setPhase] = useState<'moment' | 'wait' | 'scan' | 'done' | 'leaving'>('moment')
+function WelcomeBack({
+  onDone,
+  onFaceId,
+  faceIdActive,
+  onFaceIdCancel,
+}: {
+  onDone: () => void
+  onFaceId: () => void
+  faceIdActive: boolean
+  onFaceIdCancel: () => void
+}) {
+  const [phase, setPhase] = useState<'moment' | 'wait' | 'scan' | 'done' | 'leaving' | 'failed'>(
+    'moment',
+  )
   const onDoneRef = useRef(onDone)
   const onFaceIdRef = useRef(onFaceId)
+  const timersRef = useRef<number[]>([])
+  const sawFaceId = useRef(false)
   onDoneRef.current = onDone
   onFaceIdRef.current = onFaceId
 
-  useEffect(() => {
-    const timers = [
-      window.setTimeout(() => setPhase('wait'), 3800),
-      window.setTimeout(() => {
-        setPhase('scan')
-        onFaceIdRef.current()
-      }, 5400),
-      window.setTimeout(() => setPhase('done'), 7400),
-      window.setTimeout(() => setPhase('leaving'), 9000),
-      window.setTimeout(() => onDoneRef.current(), 9400),
+  const clearTimers = () => {
+    timersRef.current.forEach((id) => window.clearTimeout(id))
+    timersRef.current = []
+  }
+
+  const beginScan = () => {
+    sawFaceId.current = false
+    setPhase('scan')
+    onFaceIdRef.current()
+  }
+
+  const finishAfterScan = () => {
+    clearTimers()
+    timersRef.current = [
+      window.setTimeout(() => setPhase('done'), 200),
+      window.setTimeout(() => setPhase('leaving'), 1600),
+      window.setTimeout(() => onDoneRef.current(), 2000),
     ]
-    return () => timers.forEach((id) => window.clearTimeout(id))
+  }
+
+  useEffect(() => {
+    timersRef.current = [
+      window.setTimeout(() => setPhase('wait'), 3800),
+      window.setTimeout(() => beginScan(), 5400),
+    ]
+    return clearTimers
   }, [])
+
+  // Advance only after Face ID was active and then finished (success fade-out).
+  useEffect(() => {
+    if (phase !== 'scan') return
+    if (faceIdActive) {
+      sawFaceId.current = true
+      return
+    }
+    if (!sawFaceId.current) return
+    sawFaceId.current = false
+    finishAfterScan()
+  }, [phase, faceIdActive])
+
+  // Safety: if auth never completes, stop and offer retry.
+  useEffect(() => {
+    if (phase !== 'scan') return
+    const fail = window.setTimeout(() => {
+      setPhase('failed')
+      onFaceIdCancel()
+      sawFaceId.current = false
+    }, 12000)
+    return () => window.clearTimeout(fail)
+  }, [phase, onFaceIdCancel])
+
+  const retry = () => {
+    clearTimers()
+    onFaceIdCancel()
+    beginScan()
+  }
 
   if (phase === 'moment') return <JustAMoment />
 
   const scanning = phase === 'scan' || phase === 'done' || phase === 'leaving'
+  const authPending = phase === 'wait' || phase === 'scan'
 
   return (
     <div
@@ -4108,7 +4166,12 @@ function WelcomeBack({ onDone, onFaceId }: { onDone: () => void; onFaceId: () =>
           </button>
         </div>
       </div>
-      <span className="welcome__spinner" aria-hidden />
+      {authPending && <span className="welcome__spinner" aria-hidden />}
+      {phase === 'failed' && (
+        <button type="button" className="welcome__retry" onClick={retry}>
+          Try again
+        </button>
+      )}
     </div>
   )
 }
@@ -4663,7 +4726,14 @@ function App() {
         </div>
       )}
 
-      {!entered && <WelcomeBack onDone={() => setEntered(true)} onFaceId={startFaceId} />}
+      {!entered && (
+        <WelcomeBack
+          onDone={() => setEntered(true)}
+          onFaceId={startFaceId}
+          faceIdActive={faceIdPlayKey !== null}
+          onFaceIdCancel={finishFaceId}
+        />
+      )}
     </div>
   )
 }
