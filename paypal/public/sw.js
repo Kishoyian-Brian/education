@@ -1,4 +1,4 @@
-const cacheName = 'paypal-v6'
+const cacheName = 'paypal-v7'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(['/'])))

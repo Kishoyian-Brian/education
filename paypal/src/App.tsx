@@ -3072,6 +3072,31 @@ function StoreMark() {
   )
 }
 
+function RecentShopMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden>
+      <path
+        d="M4.5 10.2 6.4 5.8h11.2l1.9 4.4H4.5Z"
+        stroke="#fff"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path d="M5.2 10.2h13.6v7.4a1.2 1.2 0 0 1-1.2 1.2H6.4a1.2 1.2 0 0 1-1.2-1.2v-7.4Z" stroke="#fff" strokeWidth="1.7" />
+      <path d="M9.4 18.8v-3.6h5.2v3.6" stroke="#fff" strokeWidth="1.7" />
+    </svg>
+  )
+}
+
+function RecentBankMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden>
+      <path d="M4.8 10.2 12 5.4l7.2 4.8H4.8Z" stroke="#fff" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M7.2 10.8v6.2M12 10.8v6.2M16.8 10.8v6.2" stroke="#fff" strokeWidth="1.7" />
+      <path d="M5.2 17.8h13.6M4.4 20.2h15.2" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function AccountsScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="accounts">
@@ -4509,6 +4534,31 @@ function App() {
             </div>
           </article>
         </div>
+
+        <button
+          type="button"
+          className="recent-activity"
+          onClick={() => go('activity')}
+          aria-label={`Recent activity, ${Math.max(4, addMoney.length + sentPayments.length)} items`}
+        >
+          <div className="recent-activity__copy">
+            <span className="recent-activity__label">Recent activity</span>
+            <span className="recent-activity__count">
+              {Math.max(4, addMoney.length + sentPayments.length)}
+            </span>
+          </div>
+          <div className="recent-activity__stack" aria-hidden>
+            <span className="recent-activity__chip recent-activity__chip--shop">
+              <RecentShopMark />
+            </span>
+            <span className="recent-activity__chip recent-activity__chip--bank">
+              <RecentBankMark />
+            </span>
+            <span className="recent-activity__chip recent-activity__chip--shop">
+              <RecentShopMark />
+            </span>
+          </div>
+        </button>
 
         <section className="section section--offers">
           <SectionHeader title="Featured Offers" />
