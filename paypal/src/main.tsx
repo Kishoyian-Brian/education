@@ -31,7 +31,8 @@ function opaqueBackground(el: Element) {
 
 function statusColor() {
   if (document.documentElement.classList.contains('splash-on')) return '#022485'
-  const confirmation = document.querySelector('.send-done')
+  const confirmation =
+    document.querySelector('.send-done') || document.querySelector('.add-money__added')
   if (confirmation) return opaqueBackground(confirmation) ?? '#ffffff'
   const stack = document.elementsFromPoint(window.innerWidth / 2, 1)
   for (const el of stack) {

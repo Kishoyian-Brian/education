@@ -4,11 +4,11 @@
   /* Tab bar content height only — safe-area is padding on the bar itself */
   --nav-h: 76px;
   --nav-total: calc(var(--nav-h) + var(--sab));
+  /* inset only — 100dvh jumps on iOS PWAs and lifts the fixed footer */
   position: fixed;
   inset: 0;
   width: 100%;
   max-width: 430px;
-  height: 100dvh;
   margin: 0 auto;
   padding-top: var(--sat);
   background: #eff2f7;
@@ -724,13 +724,11 @@
   }
 }
 
-.phone > .screen,
-.phone > .bottom-nav {
+.phone > .screen {
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.phone[data-pushed] > .screen,
-.phone[data-pushed] > .bottom-nav {
+.phone[data-pushed] > .screen {
   transform: translateX(-30%);
   transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
@@ -1132,7 +1130,11 @@
 
 .add-money__added {
   position: absolute;
-  inset: 0;
+  /* Cover under the status bar (same pattern as .send-done) */
+  top: calc(-1 * var(--sat, 0px));
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 8;
   display: flex;
   flex-direction: column;
@@ -2945,16 +2947,19 @@
   line-height: 1.2;
 }
 
+/* Portaled to document.body so installed iOS PWAs can't lift it with .phone */
 .bottom-nav {
   position: fixed;
   right: 0;
-  bottom: 0;
+  bottom: var(--vv-bottom, 0px);
   left: 0;
-  z-index: 30;
+  z-index: 40;
   width: 100%;
   max-width: 430px;
   margin: 0 auto;
-  height: var(--nav-total, calc(76px + env(safe-area-inset-bottom, 0px)));
+  height: calc(76px + constant(safe-area-inset-bottom));
+  height: calc(76px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   box-sizing: border-box;
   background: #fff;
@@ -2962,6 +2967,11 @@
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: end;
+}
+
+.bottom-nav--hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .nav-item {

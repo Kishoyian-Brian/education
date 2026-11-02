@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import './App.css'
 import paypalMark from './assets/paypal-mark.png'
 import { FaceIdOverlay } from './components/FaceIdOverlay'
@@ -4237,6 +4238,26 @@ function App() {
   const finishFaceId = useCallback(() => {
     setFaceIdPlayKey(null)
   }, [])
+
+  // Keep the portaled tab bar flush with the visible bottom on installed iOS PWAs
+  useEffect(() => {
+    const root = document.documentElement
+    const sync = () => {
+      const vv = window.visualViewport
+      const inset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0
+      root.style.setProperty('--vv-bottom', `${inset}px`)
+    }
+    sync()
+    const vv = window.visualViewport
+    vv?.addEventListener('resize', sync)
+    vv?.addEventListener('scroll', sync)
+    window.addEventListener('resize', sync)
+    return () => {
+      vv?.removeEventListener('resize', sync)
+      vv?.removeEventListener('scroll', sync)
+      window.removeEventListener('resize', sync)
+    }
+  }, [])
   const active = target ?? screen
   const synced = addMoney.filter((entry) => entry.createdAt <= syncedAt)
   const spentFromBalance = sentPayments
@@ -4671,46 +4692,63 @@ function App() {
         </div>
       )}
 
-      <nav className="bottom-nav" aria-label="Main">
-        <button
-          type="button"
-          className={active === 'home' ? 'nav-item nav-item--active' : 'nav-item'}
-          onClick={() => go('home')}
+      {createPortal(
+        <nav
+          className={[
+            'bottom-nav',
+            !entered ||
+            (addMoneyOpen && !addMoneyLeaving) ||
+            (sendTo && !sendLeaving) ||
+            balanceOpen
+              ? 'bottom-nav--hidden'
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          aria-label="Main"
+          aria-hidden={!entered || (addMoneyOpen && !addMoneyLeaving) || (sendTo && !sendLeaving) || balanceOpen}
         >
-          <HomeIcon active={active === 'home'} />
-          <span>Home</span>
-        </button>
-        <button
-          type="button"
-          className={active === 'accounts' ? 'nav-item nav-item--active' : 'nav-item'}
-          onClick={() => go('accounts')}
-        >
-          <WalletIcon active={active === 'accounts'} />
-          <span>Accounts</span>
-        </button>
-        <button
-          type="button"
-          className={active === 'send' ? 'nav-item nav-item--center nav-item--active' : 'nav-item nav-item--center'}
-          onClick={() => go('send')}
-        >
-          <span className="nav-fab">
-            <SendRequestIcon />
-          </span>
-          <span>Send/Request</span>
-        </button>
-        <button
-          type="button"
-          className={active === 'activity' ? 'nav-item nav-item--active' : 'nav-item'}
-          onClick={() => go('activity')}
-        >
-          <ActivityIcon active={active === 'activity'} />
-          <span>Activity</span>
-        </button>
-        <button type="button" className="nav-item" onClick={() => finishNavigation(null)}>
-          <OffersIcon />
-          <span>Offers</span>
-        </button>
-      </nav>
+          <button
+            type="button"
+            className={active === 'home' ? 'nav-item nav-item--active' : 'nav-item'}
+            onClick={() => go('home')}
+          >
+            <HomeIcon active={active === 'home'} />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
+            className={active === 'accounts' ? 'nav-item nav-item--active' : 'nav-item'}
+            onClick={() => go('accounts')}
+          >
+            <WalletIcon active={active === 'accounts'} />
+            <span>Accounts</span>
+          </button>
+          <button
+            type="button"
+            className={active === 'send' ? 'nav-item nav-item--center nav-item--active' : 'nav-item nav-item--center'}
+            onClick={() => go('send')}
+          >
+            <span className="nav-fab">
+              <SendRequestIcon />
+            </span>
+            <span>Send/Request</span>
+          </button>
+          <button
+            type="button"
+            className={active === 'activity' ? 'nav-item nav-item--active' : 'nav-item'}
+            onClick={() => go('activity')}
+          >
+            <ActivityIcon active={active === 'activity'} />
+            <span>Activity</span>
+          </button>
+          <button type="button" className="nav-item" onClick={() => finishNavigation(null)}>
+            <OffersIcon />
+            <span>Offers</span>
+          </button>
+        </nav>,
+        document.body,
+      )}
 
       {balanceOpen && (
         <PayPalBalancePage balance={balance} onBack={() => setBalanceOpen(false)} onAddMoney={openAddMoney} />
