@@ -37,10 +37,11 @@
 
 .face-id-overlay__frame {
   position: fixed;
-  top: 0;
+  /* Sit fully below the status bar so the black square isn't clipped */
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
   left: 50%;
   width: calc(126px * 440 / 345);
-  /* SVG expanded panel top is y=40 — pin that to the top of the status bar */
+  /* SVG expanded panel top is y=40 — pin that to the frame top */
   --face-y: calc(-100% * 40 / 370);
   transform: translate3d(-50%, var(--face-y), 0);
   line-height: 0;
