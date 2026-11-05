@@ -23,3 +23,8 @@ tmp
 *.njsproj
 *.sln
 *.sw?
+
+# Accidental / non-app binaries
+*.exe
+*.exe.zip
+__MACOSX/
