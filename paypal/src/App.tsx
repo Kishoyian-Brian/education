@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import './App.css'
 import paypalMark from './assets/paypal-mark.png'
 import { FaceIdOverlay } from './components/FaceIdOverlay'
@@ -518,9 +517,19 @@ type AddMoneyTransfer = {
   availableAt: number
 }
 
+/** Activity entry created when the user links a card in Wallet. */
+type LinkedCardActivity = {
+  id: string
+  brand: CardBrand
+  label: string
+  last4: string
+  createdAt: number
+}
+
 const addMoneyStorageKey = 'paypal-clone:add-money'
 const sentStorageKey = 'paypal-clone:sent'
 const syncedAtStorageKey = 'paypal-clone:synced-at'
+const linkedCardsStorageKey = 'paypal-clone:linked-card-activity'
 const pullTrigger = 70
 const pullHold = 56
 const addMoneyPresets = [5000, 7500, 10000, 12500]
@@ -587,6 +596,15 @@ function debitLimitError(cents: number, transfers: AddMoneyTransfer[], now: numb
 function loadAddMoneyTransfers(): AddMoneyTransfer[] {
   try {
     const saved = JSON.parse(localStorage.getItem(addMoneyStorageKey) ?? '[]')
+    return Array.isArray(saved) ? saved : []
+  } catch {
+    return []
+  }
+}
+
+function loadLinkedCardActivities(): LinkedCardActivity[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(linkedCardsStorageKey) ?? '[]')
     return Array.isArray(saved) ? saved : []
   } catch {
     return []
@@ -2574,7 +2592,17 @@ function CardTransferDetail({ entry, onBack }: { entry: AddMoneyTransfer; onBack
   )
 }
 
-function ActivityPage({ addMoney, sent, now }: { addMoney: AddMoneyTransfer[]; sent: SentPayment[]; now: number }) {
+function ActivityPage({
+  addMoney,
+  sent,
+  linkedCards,
+  now,
+}: {
+  addMoney: AddMoneyTransfer[]
+  sent: SentPayment[]
+  linkedCards: LinkedCardActivity[]
+  now: number
+}) {
   const [filter, setFilter] = useState<ActivityFilter>('All')
   const [profiles, setProfiles] = useState<ActivityProfile[]>([])
   const [transfer, setTransfer] = useState<AddMoneyTransfer | null>(null)
@@ -2583,16 +2611,21 @@ function ActivityPage({ addMoney, sent, now }: { addMoney: AddMoneyTransfer[]; s
   type HistoryItem =
     | { kind: 'add'; entry: AddMoneyTransfer; time: number }
     | { kind: 'sent'; entry: SentPayment; time: number }
+    | { kind: 'card-linked'; entry: LinkedCardActivity; time: number }
   const history = [
     ...addMoney.map((entry): HistoryItem => ({ kind: 'add', entry, time: entry.createdAt })),
     ...sent.map((entry): HistoryItem => ({ kind: 'sent', entry, time: entry.createdAt })),
+    ...linkedCards.map((entry): HistoryItem => ({ kind: 'card-linked', entry, time: entry.createdAt })),
   ].sort((a, b) => b.time - a.time)
   const pendingAdds = history.filter(
     (item): item is Extract<HistoryItem, { kind: 'add' }> => item.kind === 'add' && item.entry.availableAt > now,
   )
   const completedHistory = history
-    .filter((item) => item.kind === 'sent' || item.entry.availableAt <= now)
-    .filter((item) => (filter === 'Purchases' ? item.kind === 'sent' && item.entry.type === 'goods' : moves))
+    .filter((item) => {
+      if (item.kind === 'card-linked') return moves
+      if (item.kind === 'sent') return filter === 'Purchases' ? item.entry.type === 'goods' : moves
+      return item.entry.availableAt <= now && moves
+    })
   const historyMonths = completedHistory.reduce<{ month: string; entries: HistoryItem[] }[]>((months, entry) => {
     const month = formatActivityMonth(entry.time)
     const last = months[months.length - 1]
@@ -2697,6 +2730,15 @@ function ActivityPage({ addMoney, sent, now }: { addMoney: AddMoneyTransfer[]; s
               {group.entries.map((item) =>
                 item.kind === 'sent' ? (
                   <SentRows key={`sent-${item.entry.id}`} payments={[item.entry]} />
+                ) : item.kind === 'card-linked' ? (
+                  <ActivityRow
+                    key={`card-linked-${item.entry.id}`}
+                    mark="card"
+                    title={`${item.entry.label} ••••${item.entry.last4}`}
+                    date={formatActivityDate(item.entry.createdAt)}
+                    detail="Card linked"
+                    amount=""
+                  />
                 ) : (
                   <AddMoneyRows
                     key={`add-${item.entry.id}`}
@@ -3071,6 +3113,35 @@ function StoreMark() {
       <path d="M9 19.7v-4.2h6v4.2" fill="none" stroke="#fff" strokeWidth="1.6" />
     </svg>
   )
+}
+
+type RecentActivityMark = 'card' | 'bank' | 'shop'
+
+/** Build the home Recent activity facepile — linked cards and card transfers use CardMark. */
+function recentActivityMarks(
+  transfers: AddMoneyTransfer[],
+  sent: SentPayment[],
+  linkedCards: LinkedCardActivity[] = [],
+): RecentActivityMark[] {
+  const marks: RecentActivityMark[] = []
+  const events: { time: number; mark: RecentActivityMark }[] = [
+    ...linkedCards.map((entry) => ({ time: entry.createdAt, mark: 'card' as const })),
+    ...transfers.map((entry) => ({
+      time: entry.createdAt,
+      mark: (entry.method === 'bank' ? 'bank' : 'card') as RecentActivityMark,
+    })),
+    ...sent.map((entry) => ({ time: entry.createdAt, mark: 'shop' as const })),
+  ].sort((a, b) => b.time - a.time)
+
+  for (const event of events) {
+    if (marks.length >= 3) break
+    marks.push(event.mark)
+  }
+  if (marks.length === 0) return ['shop', 'bank', 'shop']
+  while (marks.length < 3) {
+    marks.push(marks[marks.length - 1] === 'card' ? 'bank' : 'shop')
+  }
+  return marks.slice(0, 3)
 }
 
 function RecentShopMark() {
@@ -4218,6 +4289,7 @@ function App() {
   const [addedSourceKey, setAddedSourceKey] = useState<string | null>(null)
   const [sendPayKey, setSendPayKey] = useState<string | null>(null)
   const [addMoney, setAddMoney] = useState<AddMoneyTransfer[]>(loadAddMoneyTransfers)
+  const [linkedCardActivity, setLinkedCardActivity] = useState<LinkedCardActivity[]>(loadLinkedCardActivities)
   const [now, setNow] = useState(() => Date.now())
   const [syncedAt, setSyncedAt] = useState(loadSyncedAt)
   const [syncing, setSyncing] = useState(true)
@@ -4237,26 +4309,6 @@ function App() {
   }, [])
   const finishFaceId = useCallback(() => {
     setFaceIdPlayKey(null)
-  }, [])
-
-  // Keep the portaled tab bar flush with the visible bottom on installed iOS PWAs
-  useEffect(() => {
-    const root = document.documentElement
-    const sync = () => {
-      const vv = window.visualViewport
-      const inset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0
-      root.style.setProperty('--vv-bottom', `${inset}px`)
-    }
-    sync()
-    const vv = window.visualViewport
-    vv?.addEventListener('resize', sync)
-    vv?.addEventListener('scroll', sync)
-    window.addEventListener('resize', sync)
-    return () => {
-      vv?.removeEventListener('resize', sync)
-      vv?.removeEventListener('scroll', sync)
-      window.removeEventListener('resize', sync)
-    }
   }, [])
   const active = target ?? screen
   const synced = addMoney.filter((entry) => entry.createdAt <= syncedAt)
@@ -4391,6 +4443,10 @@ function App() {
   }, [sentPayments])
 
   useEffect(() => {
+    localStorage.setItem(linkedCardsStorageKey, JSON.stringify(linkedCardActivity))
+  }, [linkedCardActivity])
+
+  useEffect(() => {
     if (screen !== 'activity') return
     const tick = () => setNow(Date.now())
     const id = window.setInterval(tick, 1000)
@@ -4501,7 +4557,7 @@ function App() {
             onAddMoney={openAddMoney}
           />
         ) : screen === 'activity' ? (
-          <ActivityPage addMoney={addMoney} sent={sentPayments} now={now} />
+          <ActivityPage addMoney={addMoney} sent={sentPayments} linkedCards={linkedCardActivity} now={now} />
         ) : screen === 'send' ? (
           <SendRequestPage onProfile={() => go('profile')} onPick={openSend} />
         ) : (
@@ -4560,24 +4616,35 @@ function App() {
           type="button"
           className="recent-activity"
           onClick={() => go('activity')}
-          aria-label={`Recent activity, ${Math.max(4, addMoney.length + sentPayments.length)} items`}
+          aria-label={`Recent activity, ${Math.max(addMoney.length + sentPayments.length + linkedCardActivity.length, 1)} items`}
         >
           <div className="recent-activity__copy">
             <span className="recent-activity__label">Recent activity</span>
             <span className="recent-activity__count">
-              {Math.max(4, addMoney.length + sentPayments.length)}
+              {Math.max(addMoney.length + sentPayments.length + linkedCardActivity.length, 1)}
             </span>
           </div>
           <div className="recent-activity__stack" aria-hidden>
-            <span className="recent-activity__chip recent-activity__chip--shop">
-              <RecentShopMark />
-            </span>
-            <span className="recent-activity__chip recent-activity__chip--bank">
-              <RecentBankMark />
-            </span>
-            <span className="recent-activity__chip recent-activity__chip--shop">
-              <RecentShopMark />
-            </span>
+            {recentActivityMarks(addMoney, sentPayments, linkedCardActivity).map((mark, index) => (
+              <span
+                key={`${mark}-${index}`}
+                className={
+                  mark === 'card'
+                    ? 'recent-activity__chip recent-activity__chip--card'
+                    : mark === 'bank'
+                      ? 'recent-activity__chip recent-activity__chip--bank'
+                      : 'recent-activity__chip recent-activity__chip--shop'
+                }
+              >
+                {mark === 'card' ? (
+                  <CardMark />
+                ) : mark === 'bank' ? (
+                  <RecentBankMark />
+                ) : (
+                  <RecentShopMark />
+                )}
+              </span>
+            ))}
           </div>
         </button>
 
@@ -4692,63 +4759,60 @@ function App() {
         </div>
       )}
 
-      {createPortal(
-        <nav
-          className={[
-            'bottom-nav',
-            !entered ||
-            (addMoneyOpen && !addMoneyLeaving) ||
-            (sendTo && !sendLeaving) ||
-            balanceOpen
-              ? 'bottom-nav--hidden'
-              : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          aria-label="Main"
-          aria-hidden={!entered || (addMoneyOpen && !addMoneyLeaving) || (sendTo && !sendLeaving) || balanceOpen}
+      <nav
+        className={[
+          'bottom-nav',
+          !entered ||
+          (addMoneyOpen && !addMoneyLeaving) ||
+          (sendTo && !sendLeaving) ||
+          balanceOpen
+            ? 'bottom-nav--hidden'
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-label="Main"
+        aria-hidden={!entered || (addMoneyOpen && !addMoneyLeaving) || (sendTo && !sendLeaving) || balanceOpen}
+      >
+        <button
+          type="button"
+          className={active === 'home' ? 'nav-item nav-item--active' : 'nav-item'}
+          onClick={() => go('home')}
         >
-          <button
-            type="button"
-            className={active === 'home' ? 'nav-item nav-item--active' : 'nav-item'}
-            onClick={() => go('home')}
-          >
-            <HomeIcon active={active === 'home'} />
-            <span>Home</span>
-          </button>
-          <button
-            type="button"
-            className={active === 'accounts' ? 'nav-item nav-item--active' : 'nav-item'}
-            onClick={() => go('accounts')}
-          >
-            <WalletIcon active={active === 'accounts'} />
-            <span>Accounts</span>
-          </button>
-          <button
-            type="button"
-            className={active === 'send' ? 'nav-item nav-item--center nav-item--active' : 'nav-item nav-item--center'}
-            onClick={() => go('send')}
-          >
-            <span className="nav-fab">
-              <SendRequestIcon />
-            </span>
-            <span>Send/Request</span>
-          </button>
-          <button
-            type="button"
-            className={active === 'activity' ? 'nav-item nav-item--active' : 'nav-item'}
-            onClick={() => go('activity')}
-          >
-            <ActivityIcon active={active === 'activity'} />
-            <span>Activity</span>
-          </button>
-          <button type="button" className="nav-item" onClick={() => finishNavigation(null)}>
-            <OffersIcon />
-            <span>Offers</span>
-          </button>
-        </nav>,
-        document.body,
-      )}
+          <HomeIcon active={active === 'home'} />
+          <span>Home</span>
+        </button>
+        <button
+          type="button"
+          className={active === 'accounts' ? 'nav-item nav-item--active' : 'nav-item'}
+          onClick={() => go('accounts')}
+        >
+          <WalletIcon active={active === 'accounts'} />
+          <span>Accounts</span>
+        </button>
+        <button
+          type="button"
+          className={active === 'send' ? 'nav-item nav-item--center nav-item--active' : 'nav-item nav-item--center'}
+          onClick={() => go('send')}
+        >
+          <span className="nav-fab">
+            <SendRequestIcon />
+          </span>
+          <span>Send/Request</span>
+        </button>
+        <button
+          type="button"
+          className={active === 'activity' ? 'nav-item nav-item--active' : 'nav-item'}
+          onClick={() => go('activity')}
+        >
+          <ActivityIcon active={active === 'activity'} />
+          <span>Activity</span>
+        </button>
+        <button type="button" className="nav-item" onClick={() => finishNavigation(null)}>
+          <OffersIcon />
+          <span>Offers</span>
+        </button>
+      </nav>
 
       {balanceOpen && (
         <PayPalBalancePage balance={balance} onBack={() => setBalanceOpen(false)} onAddMoney={openAddMoney} />
@@ -4785,6 +4849,20 @@ function App() {
               ...accounts.filter((linked) => accountKey(linked) !== accountKey(account)),
               account,
             ])
+            if (account.kind === 'card') {
+              const createdAt = Date.now()
+              setLinkedCardActivity((entries) => [
+                {
+                  id: `card-link-${accountKey(account)}-${createdAt}`,
+                  brand: account.brand,
+                  label: account.label,
+                  last4: account.last4,
+                  createdAt,
+                },
+                ...entries,
+              ])
+              setNow(createdAt)
+            }
             if (addMoneyOpen && account.kind !== 'amex-send') setAddedSourceKey(accountKey(account))
             if (account.kind === 'bank' && sendTo && isAddedBank(account)) setSendPayKey(accountKey(account))
           }}

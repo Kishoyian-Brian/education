@@ -3,6 +3,17 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+/** Installed iOS PWAs: layout viewport ≠ visible height — pin shell to innerHeight. */
+function syncAppViewportHeight() {
+  const h = Math.round(window.innerHeight)
+  document.documentElement.style.setProperty('--app-h', `${h}px`)
+}
+
+syncAppViewportHeight()
+window.addEventListener('resize', syncAppViewportHeight)
+window.addEventListener('orientationchange', syncAppViewportHeight)
+window.visualViewport?.addEventListener('resize', syncAppViewportHeight)
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
@@ -15,7 +26,6 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-const statusBar = document.querySelector('.ios-blur-fix')
 const themeColor = document.querySelector('meta[name="theme-color"]')
 const appBackground = '#eff2f7'
 
@@ -47,16 +57,11 @@ function statusColor() {
 
 let appliedStatus = ''
 function applyStatusBar() {
-  if (!(statusBar instanceof HTMLElement) || !themeColor) return
+  if (!themeColor) return
   const color = statusColor()
   if (color === appliedStatus) return
   appliedStatus = color
   themeColor.setAttribute('content', color)
-  statusBar.style.backgroundColor = color
-  // iOS reads the status-bar color again after layout, not after a style write.
-  statusBar.style.height = '13px'
-  void statusBar.offsetHeight
-  statusBar.style.height = ''
 }
 
 let statusFrame = 0

@@ -14,42 +14,28 @@
 
 html {
   font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
-  height: 100%;
-  height: -webkit-fill-available;
+  height: var(--app-h, 100%);
   overflow: hidden;
-  background: #fff;
+  background: #eff2f7;
 }
 
 body {
   font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  height: 100%;
-  min-height: 100%;
-  min-height: -webkit-fill-available;
+  height: var(--app-h, 100%);
   overflow: hidden;
-  background: #fff;
+  background: #eff2f7;
 }
 
 #root {
-  height: 100%;
-  min-height: 100%;
-  min-height: -webkit-fill-available;
+  height: var(--app-h, 100%);
   overflow: hidden;
-  background: #fff;
 }
 
 .ios-blur-fix {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-top, 0px);
-  /* Below Face ID so the animation can sit on the status bar */
-  z-index: 1;
-  pointer-events: none;
-  /* Solid fill only — background-clip:text caused a translucent blur in installed PWAs */
-  background-color: #eff2f7;
+  /* Hidden — this bar covered the top of installed PWAs, including the green toast */
+  display: none;
 }
 
 html.splash-on .ios-blur-fix {
