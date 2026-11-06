@@ -3505,38 +3505,37 @@ function SentPaymentDetail({ payment, onBack }: { payment: SentPayment; onBack: 
       <div className="send-detail__actions">
         <button type="button">
           <span className="send-detail__action-icon" aria-hidden>
-            <svg viewBox="0 0 24 24">
-              <rect x="5" y="8" width="14" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <circle cx="12" cy="13" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M8 8V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V8" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
+            <AddMoneyIcon />
           </span>
           Send again
         </button>
         <button type="button">
           <span className="send-detail__action-icon" aria-hidden>
-            <svg viewBox="0 0 24 24">
+            <svg className="send-detail__glyph send-detail__glyph--pie" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
-                d="M12 4a8 8 0 1 1-7.7 10.1"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
+                d="M18.63 14.68A7.15 7.15 0 1 1 9.79 5.2"
+                stroke="#111"
+                strokeWidth="1.85"
+                strokeLinecap="butt"
               />
-              <path d="M4 12h8V4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M13.15 3.7V10.85H20.3A7.15 7.15 0 0 0 13.15 3.7Z"
+                stroke="#111"
+                strokeWidth="1.85"
+                strokeLinejoin="miter"
+              />
             </svg>
           </span>
           Split payment
         </button>
         <button type="button">
           <span className="send-detail__action-icon" aria-hidden>
-            <svg viewBox="0 0 24 24">
+            <svg className="send-detail__glyph send-detail__glyph--msg" viewBox="0 0 28 24" fill="none" aria-hidden>
               <path
-                d="M5 6.5h14v9H8.5L5 18.5V6.5Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinejoin="round"
+                d="M5.4 3.1h16.3a2 2 0 0 1 2 2v8.15a2 2 0 0 1-2 2H10.15L4.15 20.7V5.1a2 2 0 0 1 2-2Z"
+                stroke="#111"
+                strokeWidth="1.9"
+                strokeLinejoin="miter"
               />
             </svg>
           </span>
