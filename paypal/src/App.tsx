@@ -618,16 +618,20 @@ function loadSentPayments(): SentPayment[] {
     return saved.flatMap((entry) => {
       if (!entry || typeof entry.name !== 'string' || typeof entry.cents !== 'number' || typeof entry.createdAt !== 'number')
         return []
+      const name = entry.name
       const payment: SentPayment = {
         id: typeof entry.id === 'number' ? entry.id : entry.createdAt,
-        name: entry.name,
+        name,
         photo: typeof entry.photo === 'string' ? entry.photo : undefined,
-        initials: typeof entry.initials === 'string' ? entry.initials : '',
+        initials:
+          typeof entry.initials === 'string' && entry.initials ? entry.initials : contactInitials(name),
         cents: entry.cents,
         feeCents: typeof entry.feeCents === 'number' ? entry.feeCents : 0,
         note: typeof entry.note === 'string' ? entry.note : '',
         type: entry.type === 'goods' ? 'goods' : 'friends',
         sourceId: typeof entry.sourceId === 'string' ? entry.sourceId : null,
+        tone:
+          entry.tone === 'black' || entry.tone === 'blue' || entry.tone === 'sky' ? entry.tone : undefined,
         createdAt: entry.createdAt,
       }
       return [payment]
@@ -2458,6 +2462,7 @@ type SentPayment = {
   name: string
   photo?: string
   initials: string
+  tone?: 'black' | 'blue' | 'sky'
   cents: number
   feeCents: number
   note: string
@@ -2502,18 +2507,26 @@ function AddMoneyRows({
   ))
 }
 
-function SentRows({ payments }: { payments: SentPayment[] }) {
+function SentRows({
+  payments,
+  onOpen,
+}: {
+  payments: SentPayment[]
+  onOpen?: (payment: SentPayment) => void
+}) {
   return payments.map((payment) => (
     <ActivityRow
       key={payment.id}
       mark={payment.photo ? 'photo' : 'initials'}
       photo={payment.photo}
       initials={payment.initials}
+      avatarTone={payment.tone}
       title={payment.name}
       date={formatActivityDate(payment.createdAt)}
       detail={payment.type === 'goods' ? 'Goods and services' : 'Money sent'}
       note={payment.note || undefined}
       amount={`-${formatUsd(payment.cents + payment.feeCents, true)}`}
+      onOpen={onOpen ? () => onOpen(payment) : undefined}
     />
   ))
 }
@@ -2606,6 +2619,7 @@ function ActivityPage({
   const [filter, setFilter] = useState<ActivityFilter>('All')
   const [profiles, setProfiles] = useState<ActivityProfile[]>([])
   const [transfer, setTransfer] = useState<AddMoneyTransfer | null>(null)
+  const [sentDetail, setSentDetail] = useState<SentPayment | null>(null)
   const purchases = filter === 'All' || filter === 'Purchases'
   const moves = filter === 'All' || filter === 'Sent & Received'
   type HistoryItem =
@@ -2656,10 +2670,10 @@ function ActivityPage({
   }, [])
 
   useEffect(() => {
-    if (!transfer) return
+    if (!transfer && !sentDetail) return
     const screen = document.querySelector('.screen--wallet')
     if (screen instanceof HTMLElement) screen.scrollTop = 0
-  }, [transfer])
+  }, [transfer, sentDetail])
 
   return (
     <div className="activity">
@@ -2729,7 +2743,7 @@ function ActivityPage({
             <div className="activity-group">
               {group.entries.map((item) =>
                 item.kind === 'sent' ? (
-                  <SentRows key={`sent-${item.entry.id}`} payments={[item.entry]} />
+                  <SentRows key={`sent-${item.entry.id}`} payments={[item.entry]} onOpen={setSentDetail} />
                 ) : item.kind === 'card-linked' ? (
                   <ActivityRow
                     key={`card-linked-${item.entry.id}`}
@@ -2945,6 +2959,7 @@ function ActivityPage({
         ) : null}
       </section>
       {transfer ? <CardTransferDetail entry={transfer} onBack={() => setTransfer(null)} /> : null}
+      {sentDetail ? <SentPaymentDetail payment={sentDetail} onBack={() => setSentDetail(null)} /> : null}
     </div>
   )
 }
@@ -2953,6 +2968,7 @@ function ActivityRow({
   mark = 'store',
   photo,
   initials,
+  avatarTone,
   title,
   date,
   detail,
@@ -2963,6 +2979,7 @@ function ActivityRow({
   mark?: 'store' | 'card' | 'btc' | 'transfer' | 'photo' | 'initials' | 'google' | 'adblock'
   photo?: string
   initials?: string
+  avatarTone?: 'black' | 'blue' | 'sky'
   title: string
   date?: string
   detail?: string
@@ -2970,6 +2987,8 @@ function ActivityRow({
   amount: string
   onOpen?: () => void
 }) {
+  const initialsToneClass =
+    mark === 'initials' && avatarTone ? ` activity-row__mark--tone-${avatarTone}` : ''
   const markClass =
     mark === 'card'
       ? 'activity-row__mark activity-row__mark--card'
@@ -2980,7 +2999,7 @@ function ActivityRow({
           : mark === 'photo'
             ? 'activity-row__mark activity-row__mark--photo'
             : mark === 'initials'
-              ? 'activity-row__mark activity-row__mark--initials'
+              ? `activity-row__mark activity-row__mark--initials${initialsToneClass}`
               : mark === 'google'
                 ? 'activity-row__mark activity-row__mark--google'
                 : mark === 'adblock'
@@ -3115,33 +3134,42 @@ function StoreMark() {
   )
 }
 
-type RecentActivityMark = 'card' | 'bank' | 'shop'
+type RecentActivityChip =
+  | { kind: 'card' }
+  | { kind: 'bank' }
+  | { kind: 'shop' }
+  | { kind: 'sent'; photo?: string; initials: string; tone?: 'black' | 'blue' | 'sky' }
 
-/** Build the home Recent activity facepile — linked cards and card transfers use CardMark. */
-function recentActivityMarks(
+/** Home Recent activity facepile — includes sent payments (photo / initials). */
+function recentActivityChips(
   transfers: AddMoneyTransfer[],
   sent: SentPayment[],
   linkedCards: LinkedCardActivity[] = [],
-): RecentActivityMark[] {
-  const marks: RecentActivityMark[] = []
-  const events: { time: number; mark: RecentActivityMark }[] = [
-    ...linkedCards.map((entry) => ({ time: entry.createdAt, mark: 'card' as const })),
+): RecentActivityChip[] {
+  const events: { time: number; chip: RecentActivityChip }[] = [
+    ...linkedCards.map((entry) => ({ time: entry.createdAt, chip: { kind: 'card' as const } })),
     ...transfers.map((entry) => ({
       time: entry.createdAt,
-      mark: (entry.method === 'bank' ? 'bank' : 'card') as RecentActivityMark,
+      chip: (entry.method === 'bank' ? { kind: 'bank' as const } : { kind: 'card' as const }),
     })),
-    ...sent.map((entry) => ({ time: entry.createdAt, mark: 'shop' as const })),
+    ...sent.map((entry) => ({
+      time: entry.createdAt,
+      chip: {
+        kind: 'sent' as const,
+        photo: entry.photo,
+        initials: entry.initials,
+        tone: entry.tone,
+      },
+    })),
   ].sort((a, b) => b.time - a.time)
 
-  for (const event of events) {
-    if (marks.length >= 3) break
-    marks.push(event.mark)
+  const chips = events.slice(0, 3).map((event) => event.chip)
+  if (chips.length === 0) return [{ kind: 'shop' }, { kind: 'bank' }, { kind: 'shop' }]
+  while (chips.length < 3) {
+    const last = chips[chips.length - 1]
+    chips.push(last.kind === 'card' ? { kind: 'bank' } : { kind: 'shop' })
   }
-  if (marks.length === 0) return ['shop', 'bank', 'shop']
-  while (marks.length < 3) {
-    marks.push(marks[marks.length - 1] === 'card' ? 'bank' : 'shop')
-  }
-  return marks.slice(0, 3)
+  return chips.slice(0, 3)
 }
 
 function RecentShopMark() {
@@ -3411,6 +3439,137 @@ const paySources: PaySource[] = [
     mark: 'visa',
   },
 ]
+
+function sentPaymentSourceLabel(sourceId: string | null) {
+  if (!sourceId || sourceId === 'balance') return 'PayPal balance'
+  const src = paySources.find((source) => source.id === sourceId)
+  return src?.title ?? 'PayPal balance'
+}
+
+function SentPaymentDetail({ payment, onBack }: { payment: SentPayment; onBack: () => void }) {
+  const totalCents = payment.cents + payment.feeCents
+  const amount = `-${formatUsd(totalCents, true)}`
+  const code = transactionCode(String(payment.id))
+  const [copied, setCopied] = useState(false)
+  const forLabel = payment.type === 'goods' ? 'Goods and Services' : 'Friends & Family'
+  const avatarTone = payment.tone ? ` send-detail__avatar--${payment.tone}` : ' send-detail__avatar--wine'
+
+  function copyId() {
+    const markCopied = () => {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    }
+    const fallback = () => {
+      const area = document.createElement('textarea')
+      area.value = code
+      document.body.appendChild(area)
+      area.select()
+      document.execCommand('copy')
+      area.remove()
+    }
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(code).then(markCopied, () => {
+        fallback()
+        markCopied()
+      })
+      return
+    }
+    fallback()
+    markCopied()
+  }
+
+  return (
+    <div className="send-detail transfer-detail" role="dialog" aria-modal="true" aria-labelledby="send-detail-title">
+      <div className="transfer-detail__head">
+        <button type="button" aria-label="Back" onClick={onBack}>
+          <ArrowLeftIcon />
+        </button>
+        <h2 id="send-detail-title">{payment.type === 'goods' ? 'Payment sent' : 'Money sent'}</h2>
+      </div>
+
+      <div className="send-detail__summary transfer-detail__summary">
+        <span className={`send-detail__avatar${avatarTone}`} aria-hidden>
+          {payment.photo ? <img src={payment.photo} alt="" /> : payment.initials}
+        </span>
+        <div>
+          <strong>{payment.name}</strong>
+          <span>{formatTransferStamp(payment.createdAt)}</span>
+        </div>
+        <b>{amount}</b>
+      </div>
+
+      <button type="button" className="send-detail__story">
+        Show story
+      </button>
+
+      <div className="send-detail__actions">
+        <button type="button">
+          <span className="send-detail__action-icon" aria-hidden>
+            <svg viewBox="0 0 24 24">
+              <rect x="5" y="8" width="14" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <circle cx="12" cy="13" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M8 8V6.5A2.5 2.5 0 0 1 10.5 4h3A2.5 2.5 0 0 1 16 6.5V8" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
+          </span>
+          Send again
+        </button>
+        <button type="button">
+          <span className="send-detail__action-icon" aria-hidden>
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12 4a8 8 0 1 1-7.7 10.1"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+              <path d="M4 12h8V4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          Split payment
+        </button>
+        <button type="button">
+          <span className="send-detail__action-icon" aria-hidden>
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M5 6.5h14v9H8.5L5 18.5V6.5Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          Message
+        </button>
+      </div>
+
+      <h3>From</h3>
+      <div className="transfer-detail__box">
+        <span>{sentPaymentSourceLabel(payment.sourceId)}</span>
+        <b>{formatUsd(totalCents, true)}</b>
+      </div>
+
+      <div className="send-detail__for transfer-detail__box">
+        <div>
+          <span>For</span>
+          <strong>{forLabel}</strong>
+        </div>
+      </div>
+
+      <h3>Transaction ID</h3>
+      <div className="transfer-detail__box">
+        <span className="transfer-detail__code">{code}</span>
+        <button type="button" aria-label={copied ? 'Copied' : 'Copy transaction ID'} onClick={copyId}>
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <rect x="8" y="7" width="12" height="14" rx="2.2" fill="#1a3fad" />
+            <rect x="4" y="3" width="12" height="14" rx="2.2" fill="#2450d0" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function isAddedBank(account: LinkedAccount): account is Extract<LinkedAccount, { kind: 'bank' }> {
   return account.kind === 'bank' && !defaultLinkedAccounts.some((linked) => accountKey(linked) === accountKey(account))
@@ -3707,6 +3866,7 @@ function SendAmount({
         name: contact.name,
         photo: contact.photo,
         initials: contactInitials(contact.name),
+        tone: contact.tone,
         cents,
         feeCents,
         note,
@@ -4625,21 +4785,29 @@ function App() {
             </span>
           </div>
           <div className="recent-activity__stack" aria-hidden>
-            {recentActivityMarks(addMoney, sentPayments, linkedCardActivity).map((mark, index) => (
+            {recentActivityChips(addMoney, sentPayments, linkedCardActivity).map((chip, index) => (
               <span
-                key={`${mark}-${index}`}
+                key={`${chip.kind}-${index}`}
                 className={
-                  mark === 'card'
+                  chip.kind === 'card'
                     ? 'recent-activity__chip recent-activity__chip--card'
-                    : mark === 'bank'
+                    : chip.kind === 'bank'
                       ? 'recent-activity__chip recent-activity__chip--bank'
-                      : 'recent-activity__chip recent-activity__chip--shop'
+                      : chip.kind === 'sent'
+                        ? `recent-activity__chip recent-activity__chip--sent${chip.tone ? ` recent-activity__chip--sent-${chip.tone}` : ''}`
+                        : 'recent-activity__chip recent-activity__chip--shop'
                 }
               >
-                {mark === 'card' ? (
+                {chip.kind === 'card' ? (
                   <CardMark />
-                ) : mark === 'bank' ? (
+                ) : chip.kind === 'bank' ? (
                   <RecentBankMark />
+                ) : chip.kind === 'sent' ? (
+                  chip.photo ? (
+                    <img src={chip.photo} alt="" />
+                  ) : (
+                    chip.initials
+                  )
                 ) : (
                   <RecentShopMark />
                 )}
